@@ -1,3 +1,3 @@
 <?php
-define('MAILUSERNAME', 'xxxxxx@gmail.com');
+define('MAILUSERNAME', 'dev.campanel@gmail.com');
 define('MAILPASSWORD', 'xxxxxx');
