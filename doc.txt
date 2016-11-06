@@ -4,4 +4,7 @@ sudo apt-get install php7.0-xml
 
 Criar arquivo de log com permissão de escrita 777
 
-git rm --cached configMail.php
+vim .git/info/exclude
+configMail.php
+
+
