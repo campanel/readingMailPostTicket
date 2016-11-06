@@ -51,7 +51,7 @@ function getMails(){
     $emails = imap_search($inbox,'UNSEEN');
 
     $output = array();
-    var_dump($emails);
+    //var_dump($emails);
 
     if($emails != false){
         foreach($emails as $idMail) {
