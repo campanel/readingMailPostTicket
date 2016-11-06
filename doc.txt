@@ -9,4 +9,7 @@ vim .git/info/exclude
 configMail.php
 
 
+Adicionar as credenciais e renomear configMail-example.php para configMail.php
+
+
 
