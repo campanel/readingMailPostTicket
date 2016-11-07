@@ -6,7 +6,7 @@
  */
 
 set_time_limit(4000);
-define('POSTLINK', 'http://localhost:8080/dihelp/ticket');
+define('POSTLINK', 'http://localhost:8000/api/tickets');
 define('FILELOG', '/var/log/readingmailpostticket.log');
 define('WAITINGTIME', 5);
 
@@ -22,7 +22,12 @@ function main() {
         if($newEmails){
             logSave('Tem email:');
 
-            //sendTicket($data);
+            foreach ($newEmails as $email) {
+              sendTicket($email);
+
+            }
+
+            //
         }else {
             logSave("Sem emails...");
             logSave("WAITINGTIME: ".WAITINGTIME);
@@ -42,28 +47,23 @@ function main() {
 function getMails(){
     // Connect to gmail
     $imapPath = '{imap.gmail.com:993/imap/ssl}INBOX';
-
-
     // try to connect
     $inbox = imap_open($imapPath,MAILUSERNAME,MAILPASSWORD) or die('Cannot connect to Gmail: ' . imap_last_error());
-
     // Apenas emails não lidos
     $emails = imap_search($inbox,'UNSEEN');
-
     $output = array();
     //var_dump($emails);
-
     if($emails != false){
         foreach($emails as $idMail) {
-
             $headerInfo = imap_headerinfo($inbox,$idMail);
-
             $mail['subject'] = $headerInfo->subject;
             $mail['toaddress'] = $headerInfo->toaddress;
             $mail['date'] = $headerInfo->date;
-            $mail['message'] = imap_fetchbody($inbox, $idMail, 1, FT_INTERNAL);
+            $mail['status'] = 0;
+            $mail['user_id'] = 1;
+            $mail['description'] = imap_fetchbody($inbox, $idMail, 1, FT_INTERNAL);
+            //$mail['message'] = 'teste';
             $output[] = $mail;
-
         }
     }
 
@@ -80,18 +80,19 @@ function getMails(){
  */
 function sendTicket($data) {
 
-    $ch = curl_init(POSTLINK);
-    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-            'Content-Type: application/json',
-            'Content-Length: ' . strlen($data))
-    );
-
-    $result = curl_exec($ch);
-    return $result;
+  $curl = curl_init();
+  // Set some options - we are passing in a useragent too here
+  curl_setopt_array($curl, array(
+      CURLOPT_RETURNTRANSFER => 1,
+      CURLOPT_URL => POSTLINK,
+      CURLOPT_USERAGENT => 'cURL Request',
+      CURLOPT_POST => 1,
+      CURLOPT_POSTFIELDS => $data
+  ));
+  // Send the request & save response to $resp
+  $resp = curl_exec($curl);
+  // Close request to clear up some resources
+  curl_close($curl);
 }
 
 /**
