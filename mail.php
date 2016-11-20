@@ -13,30 +13,26 @@ define('WAITINGTIME', 5);
 include 'configMail.php';
 
 function main() {
-    while(true){
-        logSave('Inicio');
-
+    //while(true){
+        //logSave('<<<<< Inicio >>>>>');
         $newEmails = getMails();
 
-        //var_dump($newEmails);
-        if($newEmails){
-            logSave('Tem email:');
-
+        if(count($newEmails) > 0){
+            //logSave('**** Tem email');
             foreach ($newEmails as $email) {
               sendTicket($email);
-
             }
 
             //
         }else {
-            logSave("Sem emails...");
-            logSave("WAITINGTIME: ".WAITINGTIME);
-            sleep(WAITINGTIME);
+            //logSave("-Sem emails...");
+            //logSave("WAITINGTIME: ".WAITINGTIME);
+            //sleep(WAITINGTIME);
         }
 
         flush();
-        logSave('Fim');
-    }
+        //logSave('*** Fim ***');
+    //}
 
 }
 
@@ -45,32 +41,54 @@ function main() {
  * @return array|null
  */
 function getMails(){
-    // Connect to gmail
-    $imapPath = '{imap.gmail.com:993/imap/ssl}INBOX';
-    // try to connect
-    $inbox = imap_open($imapPath,MAILUSERNAME,MAILPASSWORD) or die('Cannot connect to Gmail: ' . imap_last_error());
-    // Apenas emails não lidos
-    $emails = imap_search($inbox,'UNSEEN');
-    $output = array();
-    //var_dump($emails);
-    if($emails != false){
-        foreach($emails as $idMail) {
-            $headerInfo = imap_headerinfo($inbox,$idMail);
-            $mail['subject'] = $headerInfo->subject;
-            $mail['toaddress'] = $headerInfo->toaddress;
-            $mail['date'] = $headerInfo->date;
-            $mail['status'] = 0;
-            $mail['user_id'] = 1;
-            $mail['description'] = imap_fetchbody($inbox, $idMail, 1, FT_INTERNAL);
-            //$mail['message'] = 'teste';
-            $output[] = $mail;
-        }
+  // Connect to gmail
+  $imapPath = '{imap.gmail.com:993/imap/ssl}INBOX';
+  // try to connect
+  $inbox = imap_open($imapPath,MAILUSERNAME,MAILPASSWORD) or die('Cannot connect to Gmail: ' . imap_last_error());
+  // Apenas emails não lidos
+  $emails = imap_search($inbox,'UNSEEN');
+  $output = array();
+  //var_dump($emails);
+  if($emails != false){
+    foreach($emails as $email_number) {
+    $overview = imap_fetch_overview($inbox,$email_number,0);
+    $structure = imap_fetchstructure($inbox, $email_number);
+
+    if(isset($structure->parts) && is_array($structure->parts) && isset($structure->parts[1])) {
+      $part = $structure->parts[1];
+      $message = imap_fetchbody($inbox,$email_number,1);
+
+      if($part->encoding == 3) {
+        //logSave('entrou no 1');
+        $message = imap_base64($message);
+      } else if($part->encoding == 1) {
+        //logSave('entrou no 2');
+        $message = imap_8bit($message);
+      } else {
+        //logSave('entrou no 3');
+        $message = imap_qprint($message);
+      }
     }
 
-    // colse the connection
-    imap_expunge($inbox);
-    imap_close($inbox);
-    return $output;
+    $headerInfo = imap_headerinfo($inbox,$email_number);
+    $from = $headerInfo->from;
+
+    foreach ($from as $id => $object) {
+      $mail['contact_name'] = imap_utf8($object->personal);
+      $mail['emails_to'] = $object->mailbox . "@" . $object->host;
+    }
+
+    $mail['title'] =  imap_utf8($overview[0]->subject);
+    $mail['description'] =  $message;
+
+    $output[] = $mail;
+    }
+  }
+
+  // colse the connection
+  imap_expunge($inbox);
+  imap_close($inbox);
+  return $output;
 }
 
 /**
@@ -104,9 +122,7 @@ function logSave($msg) {
     $msg = "[".date('Y-m-d H:i:s')."] ".$msg;
     $contents =  json_encode($msg)."\n";
     $filename = FILELOG;
-    file_put_contents($filename, $contents, FILE_APPEND);
+    //file_put_contents($filename, $contents, FILE_APPEND);
 }
 
 main();
-
-?>
